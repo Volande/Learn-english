@@ -40,7 +40,10 @@ button { background:#007AFF; color:white; border:none; }
 <input type="file" onchange="importData(event)">
 </div> 
 
-
+<div class="card">
+  <h3>📖 База слів</h3>
+  <div id="wordList"></div>
+</div>
 
 
 <script>
@@ -134,11 +137,44 @@ function autoBackup(){
   }
 }
 
+function renderWords(){
+  let list = document.getElementById("wordList");
+  list.innerHTML = "";
 
+  words.forEach((w, i) => {
+    list.innerHTML += `
+      <div style="margin-bottom:10px;">
+        <b>${w.ua}</b> — ${w.en}
+        <br>
+        <button onclick="editWord(${i})">✏️</button>
+        <button onclick="deleteWord(${i})">🗑</button>
+      </div>
+    `;
+  });
+}
 
+function deleteWord(index){
+  if(confirm("Видалити слово?")){
+    words.splice(index,1);
+    save();
+    renderWords();
+  }
+}
 
+function editWord(index){
+  let newUa = prompt("Українське:", words[index].ua);
+  let newEn = prompt("Англійське:", words[index].en);
+
+  if(newUa && newEn){
+    words[index].ua = newUa;
+    words[index].en = newEn;
+    save();
+    renderWords();
+  }
+}
 
 save();
+renderWords();
 
 autoBackup();
 
