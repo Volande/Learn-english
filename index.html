@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocabulary Trainer</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007AFF">
+
+<style>
+body { font-family: -apple-system, sans-serif; padding: 15px; background:#f5f5f5; }
+input, button { font-size:16px; margin:5px 0; padding:10px; width:100%; border-radius:8px; border:1px solid #ccc; }
+button { background:#007AFF; color:white; border:none; }
+.card { background:white; padding:15px; border-radius:12px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<h2>📚 Vocabulary Trainer</h2>
+
+<div class="card">
+<input id="ua" placeholder="Українське слово">
+<input id="en" placeholder="Англійський переклад">
+<button onclick="addWord()">Додати</button>
+</div>
+
+<div class="card">
+<input id="testCount" type="number" placeholder="Кількість слів у тесті">
+<button onclick="startTest()">Почати тест</button>
+<button onclick="startWeakTest()">Слабкі слова</button>
+</div>
+
+<div id="testArea" class="card" style="display:none;"></div>
+
+<div class="card">
+<button onclick="exportData()">📥 Експорт</button>
+<input type="file" onchange="importData(event)">
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+let words = JSON.parse(localStorage.getItem("words") || "[]");
+let current = null;
+
+function save(){ localStorage.setItem("words", JSON.stringify(words)); }
+
+function addWord(){
+  let ua = document.getElementById("ua").value;
+  let en = document.getElementById("en").value;
+  if(!ua || !en) return;
+  words.push({ua,en,correct:0,wrong:0});
+  save();
+  document.getElementById("ua").value="";
+  document.getElementById("en").value="";
+}
+
+function startTest(){
+  let count = +document.getElementById("testCount").value || words.length;
+  runTest(shuffle([...words]).slice(0,count));
+}
+
+function startWeakTest(){
+  let weak = [...words].sort((a,b)=> (b.wrong-b.correct)-(a.wrong-a.correct));
+  runTest(weak.slice(0,10));
+}
+
+function runTest(list){
+  if(list.length===0) return;
+  current = list;
+  nextWord();
+}
+
+function nextWord(){
+  if(current.length===0){ alert("Тест завершено"); return; }
+  let w = current.pop();
+  let area = document.getElementById("testArea");
+  area.style.display="block";
+  area.innerHTML = `
+    <h3>${w.ua}</h3>
+    <input id="answer" placeholder="Введи переклад">
+    <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
+  `;
+}
+
+function check(correctAnswer, index){
+  let val = document.getElementById("answer").value.trim().toLowerCase();
+  if(val === correctAnswer.toLowerCase()){
+    words[index].correct++;
+    alert("✅");
+  } else {
+    words[index].wrong++;
+    alert("❌ " + correctAnswer);
+  }
+  save();
+  nextWord();
+}
+
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+function exportData(){
+  let blob = new Blob([JSON.stringify(words)], {type:"application/json"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "backup.json";
+  a.click();
+}
+
+function importData(e){
+  let reader = new FileReader();
+  reader.onload = function(){
+    words = JSON.parse(reader.result);
+    save();
+    alert("Імпортовано");
+  };
+  reader.readAsText(e.target.files[0]);
+}
+
+function autoBackup(){
+  let today = new Date().toISOString().slice(0,10);
+  let last = localStorage.getItem("lastBackup");
+  if(last===today) return;
+  if(confirm("Зробити backup?")){
+    exportData();
+    localStorage.setItem("lastBackup", today);
+  }
+}
+
+autoBackup();
+</script>
+
+</body>
+</html>
