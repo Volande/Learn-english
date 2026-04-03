@@ -135,42 +135,6 @@ function autoBackup(){
 }
 
 
-function deleteWord(index){
-  if(confirm("Видалити слово?")){
-    words.splice(index,1);
-    save();
-    renderWords();
-  }
-}
-
-function editWord(index){
-  let newUa = prompt("Українське:", words[index].ua);
-  let newEn = prompt("Англійське:", words[index].en);
-
-  if(newUa && newEn){
-    words[index].ua = newUa;
-    words[index].en = newEn;
-    save();
-    renderWords();
-  }
-}
-
-function toggleStats(index){
-  let el = document.getElementById("stats-" + index);
-
-  if(el.style.display === "none"){
-    el.style.display = "block";
-  } else {
-    el.style.display = "none";
-  }
-}
-function getColor(w){
-  let score = w.correct - w.wrong;
-
-  if(score >= 5) return "#c8f7c5";   // 🟢 добре
-  if(score >= 0) return "#fff3b0";   // 🟡 середньо
-  return "#f7c5c5";                 // 🔴 слабко
-}
 
 
 
