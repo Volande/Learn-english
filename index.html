@@ -39,10 +39,14 @@ button { background:#007AFF; color:white; border:none; }
 <button onclick="exportData()">📥 Експорт</button>
 <input type="file" onchange="importData(event)">
 </div> 
-
 <div class="card">
-  <h3>📖 База слів</h3>
-  <div id="wordList"></div>
+  <h3 onclick="toggleWordBase()" style="cursor:pointer;">
+    📖 База слів (натисни)
+  </h3>
+
+  <div id="wordBase" style="display:none;">
+    <div id="wordList"></div>
+  </div>
 </div>
 
 
@@ -171,6 +175,24 @@ function editWord(index){
     save();
     renderWords();
   }
+}
+
+function toggleWordBase(){
+  let el = document.getElementById("wordBase");
+
+  if(el.style.display === "none"){
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
+function getColor(w){
+  let score = (w.correct || 0) - (w.wrong || 0);
+
+  if(score >= 5) return "#c8f7c5";   // 🟢 добре
+  if(score >= 0) return "#fff3b0";   // 🟡 середньо
+  return "#f7c5c5";                 // 🔴 слабко
 }
 
 save();
