@@ -31,11 +31,18 @@ button { background:#007AFF; color:white; border:none; }
 <button onclick="startWeakTest()">Слабкі слова</button>
 </div>
 
+<button onclick="startSelectedTest()">Тест вибраних</button>
+
 <div id="testArea" class="card" style="display:none;"></div>
 
 <div class="card">
 <button onclick="exportData()">📥 Експорт</button>
 <input type="file" onchange="importData(event)">
+</div>
+
+<div class="card">
+  <h3>📖 База слів</h3>
+  <div id="wordList"></div>
 </div>
 
 <script>
@@ -129,7 +136,88 @@ function autoBackup(){
   }
 }
 
+function renderWords(){
+  let list = document.getElementById("wordList");
+  list.innerHTML = "";
+
+  words.forEach((w, i) => {
+    list.innerHTML += `
+      <div style="margin-bottom:10px; padding:10px; background:${getColor(w)}; border-radius:8px;">
+        
+        <label>
+          <input type="checkbox" id="select-${i}">
+          <b onclick="toggleStats(${i})" style="cursor:pointer;">
+            ${w.ua} — ${w.en}
+          </b>
+        </label>
+
+        <div id="stats-${i}" style="display:none; margin-top:8px;">
+          ✅ ${w.correct} | ❌ ${w.wrong}
+          <br><br>
+          <button onclick="editWord(${i})">✏️</button>
+          <button onclick="deleteWord(${i})">🗑</button>
+        </div>
+
+      </div>
+    `;
+  });
+}
+
+function deleteWord(index){
+  if(confirm("Видалити слово?")){
+    words.splice(index,1);
+    save();
+    renderWords();
+  }
+}
+
+function editWord(index){
+  let newUa = prompt("Українське:", words[index].ua);
+  let newEn = prompt("Англійське:", words[index].en);
+
+  if(newUa && newEn){
+    words[index].ua = newUa;
+    words[index].en = newEn;
+    save();
+    renderWords();
+  }
+}
+
+function toggleStats(index){
+  let el = document.getElementById("stats-" + index);
+
+  if(el.style.display === "none"){
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
+function getColor(w){
+  let score = w.correct - w.wrong;
+
+  if(score >= 5) return "#c8f7c5";   // 🟢 добре
+  if(score >= 0) return "#fff3b0";   // 🟡 середньо
+  return "#f7c5c5";                 // 🔴 слабко
+}
+
+function startSelectedTest(){
+  let selected = words.filter((w, i) => {
+    return document.getElementById("select-"+i)?.checked;
+  });
+
+  if(selected.length === 0){
+    alert("Обери хоча б одне слово");
+    return;
+  }
+
+  runTest(shuffle([...selected]));
+}
+
+save();
+renderWords();
 autoBackup();
+
 </script>
 
 </body>
