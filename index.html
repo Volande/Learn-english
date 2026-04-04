@@ -65,10 +65,12 @@ button { background:#007AFF; color:white; border:none; }
 
 <div class="card">
 
-<h3 onclick="toggleAdd()" style="cursor:pointer;">📎    </h3>
+<h3 onclick="toggleExport()" style="cursor:pointer;">📎    </h3>
 
+ <div id="Export" style="display:none;">
 <button onclick="exportData()">📥 Експорт</button>
 <input type="file" onchange="importData(event)">
+   </div> 
 </div> 
 
 <div class="card">
@@ -117,9 +119,11 @@ function startWeakTest(){
 }
 
 function runTest(list){
+  userAnswers = [];
   if(list.length===0) return;
   current = list;
   nextWord();
+  
 }
 
 function nextWord(){
@@ -133,7 +137,7 @@ function nextWord(){
     <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
   `;
 
-if(currentIndex >= testWords.length){
+if(current>= testWords.length){
   showResults();
   return;
 }
@@ -256,6 +260,11 @@ function toggleAdd(){
   el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
+function toggleExport(){
+  let el = document.getElementById("Export");
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
 function toggleTest(){
   let el = document.getElementById("testBlock");
   el.style.display = el.style.display === "none" ? "block" : "none";
@@ -274,8 +283,6 @@ function reloadApp() {
 }
 
 function showResults() {
-  document.getElementById("testArea").style.display = "none"; // 🔥 сховали тест
-
   const box = document.getElementById("resultsBox");
   const list = document.getElementById("resultsList");
 
@@ -326,33 +333,7 @@ function filterResults(type) {
 
 
 
-function retryBad() {
-  // беремо тільки bad + medium
-  const retryList = userAnswers.filter(item => 
-    item.status === "bad" || item.status === "medium"
-  );
 
-  if (retryList.length === 0) {
-    alert("Немає слабких слів 👍");
-    return;
-  }
-
-  // 🔥 формуємо новий тест
-  testWords = retryList.map(item => {
-    return {
-      ua: item.question,
-      en: item.correct
-    };
-  });
-
-  currentIndex = 0;
-  userAnswers = [];
-
-  document.getElementById("resultsBox").style.display = "none";
-  document.getElementById("testArea").style.display = "block";
-
-  nextWord();
-}
 
 function retryBad() {
   // беремо тільки bad + medium
