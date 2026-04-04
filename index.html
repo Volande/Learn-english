@@ -23,7 +23,7 @@ button { background:#007AFF; color:white; border:none; }
 <body>
 
 <h2>📚 Vocabulary Trainer
-Проверка изменений</h2>
+ проверка</h2>
 
 <button onclick="reloadApp()">🔄 Перезавантажити</button>
 
@@ -38,12 +38,26 @@ button { background:#007AFF; color:white; border:none; }
 
 <div class="card">
   <h3 onclick="toggleTest()" style="cursor:pointer;">🧠 Тести</h3>
-  <div id="testBlock" style="display:none;">
-    <input id="testCount" type="number" placeholder="Кількість слів у тесті">
-    <button onclick="startTest()">Почати тест</button>
-    <button onclick="startWeakTest()">Слабкі слова</button>
+      <div id="testBlock" style="display:none;">
+  <label>Кількість слів у тесті:</label>
+  <select id="testCountSelect" onchange="toggleCustomCount()">
+    <option value="20">20</option>
+    <option value="50">50</option>
+    <option value="custom">Інше...</option>
+  </select>
+  <input id="testCount" type="number" placeholder="Введи кількість" style="display:none; margin-top:5px;">
 
-  </div>
+  <label>Вибір слів для тесту:</label>
+  <select id="testType">
+    <option value="all">Всі слова</option>
+    <option value="good">🟢 Добрі</option>
+    <option value="medium">🟡 Середні</option>
+    <option value="bad">🔴 Погані</option>
+  </select>
+
+  <button onclick="startTest()">Почати тест</button>
+  <button onclick="startWeakTest()">Слабкі слова</button>
+</div>
 </div>
 
 <div id="testArea" class="card" style="display:none;">
@@ -53,7 +67,6 @@ button { background:#007AFF; color:white; border:none; }
 <div id="resultsBox" class="card" style="display:none;">
     <h3>Результати</h3>
 
-    <button onclick="retryBad()">🔁 Повторити слабкі</button>
     <button onclick="filterResults('all')">Всі</button>
     <button onclick="filterResults('bad')">🔴 Погані</button>
     <button onclick="filterResults('medium')">🟡 Середні</button>
@@ -79,6 +92,7 @@ button { background:#007AFF; color:white; border:none; }
     📖 База слів
   </h3>
   <div id="wordBase" style="display:none;">
+<div id="wordStats" style="margin-bottom:10px; font-weight:bold;"></div>
     <div id="wordList"></div>
   </div>
 </div>
@@ -109,8 +123,49 @@ function addWord(){
 }
 
 function startTest(){
- userAnswers = [];
-  let count = +document.getElementById("testCount").value || words.length;
+  userAnswers = [];
+
+  // Визначаємо кількість слів
+  let select = document.getElementById("testCountSelect");
+  let countInput = document.getElementById("testCount");
+  let count;
+
+  if(select.value === "custom"){
+    count = parseInt(countInput.value);
+    if(isNaN(count) || count <= 0){
+      alert("Введіть правильне число слів для тесту!");
+      return;
+    }
+  } else {
+    count = parseInt(select.value);
+  }
+
+  // Визначаємо тип слів
+  let type = document.getElementById("testType").value;
+  let filteredWords = [...words];
+
+  if(type === "good"){
+    filteredWords = filteredWords.filter(w => (w.correct || 0) - (w.wrong || 0) >= 5);
+  } else if(type === "medium"){
+    filteredWords = filteredWords.filter(w => (w.correct || 0) - (w.wrong || 0) >= 0 && (w.correct || 0) - (w.wrong || 0) < 5);
+  } else if(type === "bad"){
+    filteredWords = filteredWords.filter(w => (w.correct || 0) - (w.wrong || 0) < 0);
+  }
+
+  if(filteredWords.length === 0){
+    alert("Немає слів цього типу для тесту!");
+    return;
+  }
+
+  // беремо мінімум з наявних слів
+  count = Math.min(count, filteredWords.length);
+
+  runTest(shuffle(filteredWords).slice(0,count));
+}
+
+  // беремо мінімум з наявних слів
+  count = Math.min(count, words.length);
+
   runTest(shuffle([...words]).slice(0,count));
 }
 
@@ -128,48 +183,67 @@ function runTest(list){
 }
 
 function nextWord(){
-  if(current.length===0){ alert("Тест завершено"); return; }
+  if(current.length === 0){
+    showResults();
+    document.getElementById("testArea").style.display = "none";
+    return;
+  }
+
   let w = current.pop();
   let area = document.getElementById("testArea");
   area.style.display="block";
   area.innerHTML = `
     <h3>${w.ua}</h3>
     <input id="answer" placeholder="Введи переклад">
-    <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
+    <button onclick="checkWord('${w.en}', '${w.ua}')">OK</button>
   `;
-
 }
 
-function check(correctAnswer, index){
-  let val = document.getElementById("answer").value.trim().toLowerCase();
 
+function checkWord(correctAnswer, ua){
+  let val = document.getElementById("answer").value.trim();
   let status;
 
-  if(val === correctAnswer.toLowerCase()){
-    words[index].correct++;
+  if(val.toLowerCase() === correctAnswer.toLowerCase()){
     status = "good";
-    alert("✅");
-  } else if (val !== "") {
-    words[index].wrong++;
+    alert("✅ Правильно!");
+  } else if(val !== ""){
     status = "medium";
-    alert("❌ " + correctAnswer);
+    alert("❌ Неправильно! Правильна відповідь: " + correctAnswer);
   } else {
-    words[index].wrong++;
     status = "bad";
-    alert("❌ " + correctAnswer);
+    alert("❌ Пропущено! Правильна відповідь: " + correctAnswer);
   }
 
-  // 🔥 ЗБЕРІГАЄМО РЕЗУЛЬТАТ
   userAnswers.push({
-    question: words[index].ua,     // або як у тебе називається українське слово
+    question: ua,
     correct: correctAnswer,
     user: val,
     status: status
   });
 
-  save();
-  renderWords();
+  showResults(); // можна викликати тільки в кінці тесту
   nextWord();
+}
+
+function showResults(){
+  const box = document.getElementById("resultsBox");
+  const list = document.getElementById("resultsList");
+  list.innerHTML = "";
+
+  userAnswers.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "result-item " + (item.status || "");
+
+    div.innerHTML = `
+      <b>${item.question}</b><br>
+      Ти: ${item.user || "—"}<br>
+      Правильно: ${item.correct}
+    `;
+    list.appendChild(div);
+  });
+
+  box.style.display = "block";
 }
 
 function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
@@ -211,13 +285,21 @@ function getColor(w){
 }
 
 function renderWords(){
+  const stats = document.getElementById("wordStats");
+  const total = words.length;
+  const good = words.filter(w => (w.correct || 0) - (w.wrong || 0) >= 5).length;
+  const medium = words.filter(w => (w.correct || 0) - (w.wrong || 0) >= 0 && (w.correct || 0) - (w.wrong || 0) < 5).length;
+  const bad = words.filter(w => (w.correct || 0) - (w.wrong || 0) < 0).length;
+
+  stats.innerHTML = `Загалом слів: ${total} | 🟢 Добрі: ${good} | 🟡 Середні: ${medium} | 🔴 Погані: ${bad}`;
+
   let list = document.getElementById("wordList");
   list.innerHTML = "";
 
   words.forEach((w, i) => {
     list.innerHTML += `
       <div style="margin-bottom:10px; padding:10px; border-radius:8px; background:${getColor(w)};">
-        <b>${w.ua}</b> — ${w.en}
+        <b>${w.ua}</b> — ${w.en} (✅ ${w.correct || 0} | ❌ ${w.wrong || 0})
         <br>
         <button onclick="editWord(${i})">✏️</button>
         <button onclick="deleteWord(${i})">🗑</button>
@@ -243,6 +325,19 @@ function editWord(index){
     words[index].en = newEn;
     save();
     renderWords();
+  }
+}
+
+
+function toggleCustomCount(){
+  const select = document.getElementById("testCountSelect");
+  const input = document.getElementById("testCount");
+  if(select.value === "custom"){
+    input.style.display = "block";
+    input.value = "";
+  } else {
+    input.style.display = "none";
+    input.value = select.value; // автоматично підставляємо обране число
   }
 }
 
@@ -276,28 +371,6 @@ function reloadApp() {
     } else {
         location.reload();
     }
-}
-
-function showResults() {
-  const box = document.getElementById("resultsBox");
-  const list = document.getElementById("resultsList");
-
-  list.innerHTML = "";
-
-  userAnswers.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "result-item " + item.status;
-
-    div.innerHTML = `
-      <b>${item.question}</b><br>
-      Ти: ${item.user || "—"}<br>
-      Правильно: ${item.correct}
-    `;
-
-    list.appendChild(div);
-  });
-
-  box.style.display = "block";
 }
 
 function closeResults() {
