@@ -39,7 +39,27 @@ button { background:#007AFF; color:white; border:none; }
 <div class="card">
   <h3 onclick="toggleTest()" style="cursor:pointer;">🧠 Тести</h3>
   <div id="testBlock" style="display:none;">
+
+    <!-- Вибір кількості слів -->
+    <div style="margin-bottom:10px;">
+      <button onclick="setTestCount(20)">20 слів</button>
+      <button onclick="setTestCount(50)">50 слів</button>
+      <button onclick="setTestCount('')">Довільна</button>
+    </div>
+
     <input id="testCount" type="number" placeholder="Кількість слів у тесті">
+
+    <!-- Вибір типу слів -->
+    <div style="margin:10px 0;">
+      <label>Тип слів: </label>
+      <select id="testType">
+        <option value="all">Всі</option>
+        <option value="good">Добрі 🟢</option>
+        <option value="medium">Середні 🟡</option>
+        <option value="bad">Погані 🔴</option>
+      </select>
+    </div>
+
     <button onclick="startTest()">Почати тест</button>
     <button onclick="startWeakTest()">Слабкі слова</button>
 
@@ -110,9 +130,27 @@ function addWord(){
 }
 
 function startTest(){
- userAnswers = [];
+  userAnswers = [];
+
+  // Отримуємо кількість слів
   let count = +document.getElementById("testCount").value || words.length;
-  runTest(shuffle([...words]).slice(0,count));
+
+  // Отримуємо тип слів
+  const type = document.getElementById("testType").value;
+
+  // Фільтруємо слова за типом
+  let filtered = [...words];
+  if(type !== "all"){
+    filtered = filtered.filter(w => {
+      const score = (w.correct || 0) - (w.wrong || 0);
+      if(type === "good") return score >= 5;
+      if(type === "medium") return score >= 0 && score < 5;
+      if(type === "bad") return score < 0;
+    });
+  }
+
+  // Випадковий порядок та обмеження кількості
+ 
 }
 
 function startWeakTest(){
@@ -386,6 +424,12 @@ function retryBad() {
   document.getElementById("testArea").style.display = "block";
 
   nextWord();
+}
+
+function setTestCount(n){
+  const input = document.getElementById("testCount");
+  if(n === '') input.value = ''; // довільна кількість → користувач сам вводить
+  else input.value = n;
 }
 
 
