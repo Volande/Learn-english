@@ -314,7 +314,6 @@ function filterResults(type) {
 
   let filtered = userAnswers;
 
-  // Якщо є статуси (correct, wrong) в об'єктах, можна залишити фільтр
   if (type !== "all") {
     filtered = userAnswers.filter(item => item.status === type);
   }
@@ -324,7 +323,9 @@ function filterResults(type) {
     div.className = "result-item " + (item.status || "");
 
     div.innerHTML = `
-      <b>${item.ua}</b> — ${item.eu}<br>
+      <b>${item.question}</b><br>
+      Ти: ${item.user || "—"}<br>
+      Правильно: ${item.correct}
     `;
 
     list.appendChild(div);
