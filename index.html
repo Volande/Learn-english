@@ -23,7 +23,7 @@ button { background:#007AFF; color:white; border:none; }
 <body>
 
 <h2>📚 Vocabulary Trainer
-Проверка изменений</h2>
+Устал</h2>
 
 <button onclick="reloadApp()">🔄 Перезавантажити</button>
 
@@ -129,7 +129,13 @@ function runTest(list){
 }
 
 function nextWord(){
-  if(current.length===0){ alert("Тест завершено"); return; }
+  if(!current || current.length === 0){
+    // Тест закінчено
+    document.getElementById("testArea").style.display = "none";
+    showResults(); // <-- показуємо результати
+    return;
+  }
+
   let w = current.pop();
   let area = document.getElementById("testArea");
   area.style.display="block";
@@ -138,7 +144,6 @@ function nextWord(){
     <input id="answer" placeholder="Введи переклад">
     <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
   `;
-
 }
 
 function check(correctAnswer, index){
