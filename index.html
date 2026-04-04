@@ -64,6 +64,9 @@ button { background:#007AFF; color:white; border:none; }
 </div>
 
 <div class="card">
+
+<h3 onclick="toggleAdd()" style="cursor:pointer;">📎    </h3>
+
 <button onclick="exportData()">📥 Експорт</button>
 <input type="file" onchange="importData(event)">
 </div> 
@@ -79,11 +82,12 @@ button { background:#007AFF; color:white; border:none; }
 
 <script>
 
-let userAnswers = [];
-
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
+  
+
+let userAnswers = [];
 
 let words = JSON.parse(localStorage.getItem("words") || "[]");
 let current = null;
