@@ -22,7 +22,8 @@ button { background:#007AFF; color:white; border:none; }
 </head>
 <body>
 
-<h2>📚 Vocabulary Trainer</h2>
+<h2>📚 Vocabulary Trainer
+Проверка изменений</h2>
 
 <button onclick="reloadApp()">🔄 Перезавантажити</button>
 
@@ -136,11 +137,6 @@ function nextWord(){
     <input id="answer" placeholder="Введи переклад">
     <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
   `;
-
-if(current>= testWords.length){
-  showResults();
-  return;
-}
 
 }
 
