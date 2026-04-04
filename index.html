@@ -157,10 +157,7 @@ function startTest(){
     return;
   }
 
-  // беремо мінімум з наявних слів
-  count = Math.min(count, filteredWords.length);
-
-  runTest(shuffle(filteredWords).slice(0,count));
+  
 }
 
   // беремо мінімум з наявних слів
@@ -222,8 +219,16 @@ function checkWord(correctAnswer, ua){
     status: status
   });
 
-  showResults(); // можна викликати тільки в кінці тесту
-  nextWord();
+  // Оновлюємо статистику у words, якщо слово існує
+  let word = words.find(w => w.ua === ua && w.en === correctAnswer);
+  if(word){
+    if(status === "good") word.correct++;
+    else word.wrong++;
+    save();
+    renderWords();
+  }
+
+  nextWord(); // виклик наступного слова
 }
 
 function showResults(){
