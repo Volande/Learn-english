@@ -20,18 +20,22 @@ button { background:#007AFF; color:white; border:none; }
 <h2>📚 Vocabulary Trainer</h2>
 
 <div class="card">
-<input id="ua" placeholder="Українське слово">
-<input id="en" placeholder="Англійський переклад">
-<button onclick="addWord()">Додати</button>
+  <h3 onclick="toggleAdd()" style="cursor:pointer;">➕ Додавання слова</h3>
+  <div id="addBlock" style="display:none;">
+    <input id="ua" placeholder="Українське слово">
+    <input id="en" placeholder="Англійський переклад">
+    <button onclick="addWord()">Додати</button>
+  </div>
 </div>
 
 <div class="card">
-<input id="testCount" type="number" placeholder="Кількість слів у тесті">
-<button onclick="startTest()">Почати тест</button>
-<button onclick="startWeakTest()">Слабкі слова</button>
+  <h3 onclick="toggleTest()" style="cursor:pointer;">🧠 Тести</h3>
+  <div id="testBlock" style="display:none;">
+    <input id="testCount" type="number" placeholder="Кількість слів у тесті">
+    <button onclick="startTest()">Почати тест</button>
+    <button onclick="startWeakTest()">Слабкі слова</button>
+  </div>
 </div>
-
-
 
 <div id="testArea" class="card" style="display:none;"></div>
 
@@ -39,16 +43,15 @@ button { background:#007AFF; color:white; border:none; }
 <button onclick="exportData()">📥 Експорт</button>
 <input type="file" onchange="importData(event)">
 </div> 
+
 <div class="card">
   <h3 onclick="toggleWordBase()" style="cursor:pointer;">
-    📖 База слів (натисни)
+    📖 База слів
   </h3>
-
   <div id="wordBase" style="display:none;">
     <div id="wordList"></div>
   </div>
 </div>
-
 
 <script>
 if ('serviceWorker' in navigator) {
@@ -66,6 +69,7 @@ function addWord(){
   if(!ua || !en) return;
   words.push({ua,en,correct:0,wrong:0});
   save();
+  renderWords();
   document.getElementById("ua").value="";
   document.getElementById("en").value="";
 }
@@ -108,6 +112,7 @@ function check(correctAnswer, index){
     alert("❌ " + correctAnswer);
   }
   save();
+  renderWords();
   nextWord();
 }
 
@@ -126,6 +131,7 @@ function importData(e){
   reader.onload = function(){
     words = JSON.parse(reader.result);
     save();
+    renderWords();
     alert("Імпортовано");
   };
   reader.readAsText(e.target.files[0]);
@@ -141,13 +147,20 @@ function autoBackup(){
   }
 }
 
+function getColor(w){
+  let score = (w.correct || 0) - (w.wrong || 0);
+  if(score >= 5) return "#c8f7c5";
+  if(score >= 0) return "#fff3b0";
+  return "#f7c5c5";
+}
+
 function renderWords(){
   let list = document.getElementById("wordList");
   list.innerHTML = "";
 
   words.forEach((w, i) => {
     list.innerHTML += `
-      <div style="margin-bottom:10px;">
+      <div style="margin-bottom:10px; padding:10px; border-radius:8px; background:${getColor(w)};">
         <b>${w.ua}</b> — ${w.en}
         <br>
         <button onclick="editWord(${i})">✏️</button>
@@ -179,27 +192,21 @@ function editWord(index){
 
 function toggleWordBase(){
   let el = document.getElementById("wordBase");
-
-  if(el.style.display === "none"){
-    el.style.display = "block";
-  } else {
-    el.style.display = "none";
-  }
+  el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
-function getColor(w){
-  let score = (w.correct || 0) - (w.wrong || 0);
-
-  if(score >= 5) return "#c8f7c5";   // 🟢 добре
-  if(score >= 0) return "#fff3b0";   // 🟡 середньо
-  return "#f7c5c5";                 // 🔴 слабко
+function toggleAdd(){
+  let el = document.getElementById("addBlock");
+  el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
-save();
+function toggleTest(){
+  let el = document.getElementById("testBlock");
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
 renderWords();
-
 autoBackup();
-
 </script>
 
 </body>
