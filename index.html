@@ -10,7 +10,7 @@
 
 <style>
 body { font-family: -apple-system, sans-serif; padding: 15px; background:#f5f5f5; }
-input, button { font-size:16px; margin:5px 0; padding:10px; width:100%; border-radius:8px; border:1px solid #ccc; }
+input, button { font-size:16px; margin:5px 0; padding:10px; width:90%; border-radius:8px; border:1px solid #ccc; }
 input, textarea, select {
     width: 100%;
     box-sizing: border-box;
@@ -23,6 +23,8 @@ button { background:#007AFF; color:white; border:none; }
 <body>
 
 <h2>📚 Vocabulary Trainer</h2>
+
+<button onclick="reloadApp()">🔄 Перезавантажити</button>
 
 <div class="card">
   <h3 onclick="toggleAdd()" style="cursor:pointer;">➕ Додавання слова</h3>
@@ -39,10 +41,19 @@ button { background:#007AFF; color:white; border:none; }
     <input id="testCount" type="number" placeholder="Кількість слів у тесті">
     <button onclick="startTest()">Почати тест</button>
     <button onclick="startWeakTest()">Слабкі слова</button>
+
   </div>
 </div>
 
-<div id="testArea" class="card" style="display:none;"></div>
+<div id="testArea" class="card" style="display:none;">
+
+<div id="resultsBox" style="display:none;">
+    <h3>Результати</h3>
+    <div id="resultsList"></div>
+    <button onclick="closeResults()">Закрити</button>
+</div>
+
+</div>
 
 <div class="card">
 <button onclick="exportData()">📥 Експорт</button>
@@ -59,6 +70,9 @@ button { background:#007AFF; color:white; border:none; }
 </div>
 
 <script>
+
+let userAnswers = [];
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
@@ -80,6 +94,7 @@ function addWord(){
 }
 
 function startTest(){
+ userAnswers = [];
   let count = +document.getElementById("testCount").value || words.length;
   runTest(shuffle([...words]).slice(0,count));
 }
@@ -105,17 +120,41 @@ function nextWord(){
     <input id="answer" placeholder="Введи переклад">
     <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
   `;
+
+if(currentIndex >= testWords.length){
+  showResults();
+  return;
+}
+
 }
 
 function check(correctAnswer, index){
   let val = document.getElementById("answer").value.trim().toLowerCase();
+
+  let status;
+
   if(val === correctAnswer.toLowerCase()){
     words[index].correct++;
+    status = "good";
     alert("✅");
+  } else if (val !== "") {
+    words[index].wrong++;
+    status = "medium";
+    alert("❌ " + correctAnswer);
   } else {
     words[index].wrong++;
+    status = "bad";
     alert("❌ " + correctAnswer);
   }
+
+  // 🔥 ЗБЕРІГАЄМО РЕЗУЛЬТАТ
+  userAnswers.push({
+    question: words[index].ua,     // або як у тебе називається українське слово
+    correct: correctAnswer,
+    user: val,
+    status: status
+  });
+
   save();
   renderWords();
   nextWord();
@@ -208,6 +247,40 @@ function toggleAdd(){
 function toggleTest(){
   let el = document.getElementById("testBlock");
   el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function reloadApp() {
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => caches.delete(name));
+        }).then(() => {
+            location.reload();
+        });
+    } else {
+        location.reload();
+    }
+}
+
+function showResults() {
+  const box = document.getElementById("resultsBox");
+  const list = document.getElementById("resultsList");
+
+  list.innerHTML = "";
+
+  userAnswers.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "result-item " + item.status;
+
+    div.innerHTML = `
+      <b>${item.question}</b><br>
+      Ти: ${item.user || "—"}<br>
+      Правильно: ${item.correct}
+    `;
+
+    list.appendChild(div);
+  });
+
+  box.style.display = "block";
 }
 
 renderWords();
