@@ -4,446 +4,255 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vocabulary Trainer</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#007AFF">
-
 <style>
-body { font-family: -apple-system, sans-serif; padding: 15px; background:#f5f5f5; }
-input, button { font-size:16px; margin:5px 0; padding:10px; width:90%; border-radius:8px; border:1px solid #ccc; }
-input, textarea, select {
-    width: 100%;
-    box-sizing: border-box;
-    max-width: 100%;
-}
-button { background:#007AFF; color:white; border:none; }
-.card { background:white; padding:15px; border-radius:12px; margin-bottom:10px; }
+body { font-family:-apple-system, sans-serif; margin:0; padding:0; background:#f5f5f5; }
+/* Header */
+header { background:#007AFF; color:white; padding:20px; text-align:center; font-size:24px; font-weight:bold; position:relative; }
+/* Container */
+.container { display:flex; height:calc(100vh - 70px); }
+/* Sidebar */
+.sidebar { width:0; overflow-x:hidden; transition:0.3s; background:#fff; border-right:1px solid #ccc; padding:20px 0; box-shadow:2px 0 5px rgba(0,0,0,0.1); }
+.sidebar.open { width:300px; }
+.sidebar h3 { padding:10px 20px; margin:0; cursor:pointer; background:#f0f0f0; }
+.sidebar .card { padding:10px 20px; display:none; }
+.sidebar input, .sidebar select, .sidebar button { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
+.sidebar button { background:#007AFF; color:white; border:none; }
+/* Main */
+.main { flex:1; padding:20px; overflow-y:auto; }
+.main button { background:#007AFF; color:white; border:none; padding:10px; margin:5px 0; width:200px; border-radius:8px; cursor:pointer; }
+.card { background:white; padding:15px; border-radius:12px; margin-bottom:15px; }
+.result-item { padding:8px; margin-bottom:5px; border-radius:6px; }
+.result-item.good { background:#c8f7c5; }
+.result-item.medium { background:#fff3b0; }
+.result-item.bad { background:#f7c5c5; }
+#testArea input { width:calc(100% - 20px); padding:10px; margin:5px 0; }
+#testArea button { margin-top:5px; }
 </style>
 </head>
 <body>
 
-<h2>📚 Vocabulary Trainer
-Устал</h2>
+<header>
+  <button style="position:absolute; top:20px; left:5px;" onclick="toggleSidebar()">☰ Меню</button>
+  📚 Vocabulary Trainer
+</header>
 
-<button onclick="reloadApp()">🔄 Перезавантажити</button>
-
-<div class="card">
-  <h3 onclick="toggleAdd()" style="cursor:pointer;">➕ Додавання слова</h3>
-  <div id="addBlock" style="display:none;">
-    <input id="ua" placeholder="Українське слово">
-    <input id="en" placeholder="Англійський переклад">
-    <button onclick="addWord()">Додати</button>
-  </div>
-</div>
-
-<div  class="card">
-  <h3 onclick="toggleTest()" style="cursor:pointer;">🧠 Тести</h3>
-  <div id="testBlock"  style="display:none;">
-
-    <!-- Вибір кількості слів -->
-    <div style="margin-bottom:10px;">
-      <button onclick="setTestCount(20)">20 слів</button>
-      <button onclick="setTestCount(50)">50 слів</button>
-      <button onclick="setTestCount('')">Довільна</button>
+<div class="container">
+  <div class="sidebar" id="sidebar">
+    <h3 onclick="toggleCard('addCard')">➕ Додавання слова</h3>
+    <div class="card" id="addCard">
+      <input id="ua" placeholder="Українське слово">
+      <input id="en" placeholder="Англійський переклад">
+      <button onclick="addWord()">Додати</button>
     </div>
 
-    <input id="testCount" type="number" placeholder="Кількість слів у тесті">
-
-    <!-- Вибір типу слів -->
-    <div style="margin:10px 0;">
-      <label>Тип слів: </label>
-      <select id="testType">
-        <option value="all">Всі</option>
-        <option value="good">Добрі 🟢</option>
-        <option value="medium">Середні 🟡</option>
-        <option value="bad">Погані 🔴</option>
-      </select>
+    <h3 onclick="toggleCard('wordBaseCard')">📖 База слів</h3>
+    <div class="card" id="wordBaseCard">
+      <input id="searchWord" placeholder="Пошук слова" oninput="renderWords()">
+      <button onclick="clearSearch()">Очистити пошук</button>
+      <div id="wordStats" style="font-weight:bold;margin-bottom:10px;"></div>
+      <div id="wordList"></div>
     </div>
 
-    <button onclick="startTest()">Почати тест</button>
-    <button onclick="startWeakTest()">Слабкі слова</button>
-
+    <h3 onclick="toggleCard('exportCard')">📎 Експорт/Імпорт</h3>
+    <div class="card" id="exportCard">
+      <button onclick="exportData()">📥 Експорт</button>
+      <input type="file" onchange="importData(event)">
+    </div>
   </div>
-</div>
 
-<div id="testArea" class="card" style="display:none;">
-    <!-- тут сам тест -->
-</div>
+  <div class="main">
+    <button onclick="toggleTestCard()">🧠 Вибір тестів</button>
+    <div class="card" id="testCard" style="display:none;">
+      <div>
+        <button onclick="setTestCount(20)">20 слів</button>
+        <button onclick="setTestCount(50)">50 слів</button>
+        <button onclick="setTestCount('')">Довільна</button>
+      </div>
+      <input id="testCount" type="number" placeholder="Кількість слів у тесті">
+      <div style="margin:10px 0;">
+        <label>Тип слів: </label>
+        <select id="testType">
+          <option value="all">Всі</option>
+          <option value="good">Добрі 🟢</option>
+          <option value="medium">Середні 🟡</option>
+          <option value="bad">Погані 🔴</option>
+        </select>
+      </div>
+      <button onclick="startTest()">Почати тест</button>
+      <button onclick="startWeakTest()">Слабкі слова</button>
+    </div>
 
-<div id="resultsBox" class="card" style="display:none;">
-    <h3>Результати</h3>
+    <div id="testArea" class="card" style="display:none;"></div>
 
-    <button onclick="retryBad()">🔁 Повторити слабкі</button>
-    <button onclick="filterResults('all')">Всі</button>
-    <button onclick="filterResults('bad')">🔴 Погані</button>
-    <button onclick="filterResults('medium')">🟡 Середні</button>
-    <button onclick="filterResults('good')">🟢 Добрі</button>
-
-    <div id="resultsList"></div>
-
-    <button onclick="closeResults()">Закрити</button>
-</div>
-
-<div class="card">
-
-<h3 onclick="toggleExport()" style="cursor:pointer;">📎    </h3>
-
- <div id="Export" style="display:none;">
-<button onclick="exportData()">📥 Експорт</button>
-<input type="file" onchange="importData(event)">
-   </div> 
-</div> 
-
-<div class="card">
-  <h3 onclick="toggleWordBase()" style="cursor:pointer;">
-    📖 База слів
-  </h3>
-  <div id="wordBase" style="display:none;">
-    <div id="wordStats" style="margin-bottom:10px; font-weight:bold;"></div>
-    <div id="wordList"></div>
-</div>
+    <div id="resultsBox" class="card" style="display:none;">
+      <h3>Результати</h3>
+      <button onclick="retryBad()">🔁 Повторити слабкі</button>
+      <button onclick="filterResults('all')">Всі</button>
+      <button onclick="filterResults('bad')">🔴 Погані</button>
+      <button onclick="filterResults('medium')">🟡 Середні</button>
+      <button onclick="filterResults('good')">🟢 Добрі</button>
+      <div id="resultsList" style="margin-top:10px;"></div>
+      <button onclick="closeResults()">Закрити</button>
+    </div>
+  </div>
 </div>
 
 <script>
+// Sidebar
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function toggleCard(id){ const c=document.getElementById(id); c.style.display=c.style.display==='block'?'none':'block'; }
+function toggleTestCard(){ const c=document.getElementById('testCard'); c.style.display=c.style.display==='block'?'none':'block'; }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-  
-
-let userAnswers = [];
-
-let words = JSON.parse(localStorage.getItem("words") || "[]");
-let current = null;
+// --- Слова ---
+let userAnswers=[];
+let words=JSON.parse(localStorage.getItem("words")||"[]");
+let current=null;
 
 function save(){ localStorage.setItem("words", JSON.stringify(words)); }
 
 function addWord(){
-  let ua = document.getElementById("ua").value;
-  let en = document.getElementById("en").value;
-  if(!ua || !en) return;
+  let ua=document.getElementById("ua").value;
+  let en=document.getElementById("en").value;
+  if(!ua||!en) return;
   words.push({ua,en,correct:0,wrong:0});
-  save();
-  renderWords();
-  document.getElementById("ua").value="";
-  document.getElementById("en").value="";
+  save(); renderWords();
+  document.getElementById("ua").value=""; document.getElementById("en").value="";
 }
 
+// --- Тести ---
 function startTest(){
-  userAnswers = [];
-
-  // Отримуємо кількість слів
-  let count = +document.getElementById("testCount").value || words.length;
-
-  // Отримуємо тип слів
-  const type = document.getElementById("testType").value;
-
-  // Фільтруємо слова за типом
-  let filtered = [...words];
-  if(type !== "all"){
-    filtered = filtered.filter(w => {
-      const score = (w.correct || 0) - (w.wrong || 0);
-      if(type === "good") return score >= 5;
-      if(type === "medium") return score >= 0 && score < 5;
-      if(type === "bad") return score < 0;
+  userAnswers=[];
+  let count=+document.getElementById("testCount").value || words.length;
+  const type=document.getElementById("testType").value;
+  let filtered=[...words];
+  if(type!=="all"){
+    filtered=filtered.filter(w=>{
+      const score=(w.correct||0)-(w.wrong||0);
+      if(type==="good") return score>=5;
+      if(type==="medium") return score>=0 && score<5;
+      if(type==="bad") return score<0;
     });
   }
-
-filtered = shuffle(filtered);
-
-  // обмеження кількості слів
-  if(count < filtered.length) filtered = filtered.slice(0,count);
-
+  filtered=shuffle(filtered);
+  if(count<filtered.length) filtered=filtered.slice(0,count);
+  document.getElementById("testCard").style.display="none"; // закриваємо вибір тесту
   runTest(filtered);
-
-  
- 
 }
 
 function startWeakTest(){
-  let weak = [...words].sort((a,b)=> (b.wrong-b.correct)-(a.wrong-a.correct));
+  let weak=[...words].sort((a,b)=> (b.wrong-b.correct)-(a.wrong-a.correct));
+  document.getElementById("testCard").style.display="none";
   runTest(weak.slice(0,10));
 }
 
 function runTest(list){
-  userAnswers = [];
-  if(list.length===0) return;
-  current = list;
+  if(list.length===0){ alert("Немає слів для тесту!"); return; }
+  current=list;
   nextWord();
-  
 }
 
 function nextWord(){
-  if(!current || current.length === 0){
-    // Тест закінчено
-    document.getElementById("testArea").style.display = "none";
-    showResults(); // <-- показуємо результати
-    return;
-  }
-
-  let w = current.pop();
-  let area = document.getElementById("testArea");
+  if(!current || current.length===0){ document.getElementById("testArea").style.display="none"; showResults(); return; }
+  let w=current.pop();
+  const area=document.getElementById("testArea");
   area.style.display="block";
-  area.innerHTML = `
-    <h3>${w.ua}</h3>
-    <input id="answer" placeholder="Введи переклад">
-    <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
-  `;
+  area.innerHTML=`<h3>${w.ua}</h3>`;
+  const input=document.createElement("input");
+  input.id="answer"; input.placeholder="Введи переклад";
+  area.appendChild(input);
+  const btn=document.createElement("button");
+  btn.textContent="OK"; btn.style.marginTop="5px";
+  area.appendChild(btn);
+  btn.addEventListener("click",()=>check(w));
 }
 
-function check(correctAnswer, index){
-  let val = document.getElementById("answer").value.trim().toLowerCase();
-
+function check(wordObj){
+  const val=document.getElementById("answer").value.trim().toLowerCase();
   let status;
-
-  if(val === correctAnswer.toLowerCase()){
-    words[index].correct++;
-    status = "good";
-    alert("✅");
-  } else if (val !== "") {
-    words[index].wrong++;
-    status = "medium";
-    alert("❌ " + correctAnswer);
-  } else {
-    words[index].wrong++;
-    status = "bad";
-    alert("❌ " + correctAnswer);
-  }
-
-  // 🔥 ЗБЕРІГАЄМО РЕЗУЛЬТАТ
-  userAnswers.push({
-    question: words[index].ua,     // або як у тебе називається українське слово
-    correct: correctAnswer,
-    user: val,
-    status: status
-  });
-
-  save();
-  renderWords();
-  nextWord();
+  if(val===wordObj.en.toLowerCase()){ wordObj.correct++; status="good"; alert("✅ Правильно!"); }
+  else if(val!==""){ wordObj.wrong++; status="medium"; alert("❌ Неправильно! Вірна відповідь: "+wordObj.en); }
+  else{ wordObj.wrong++; status="bad"; alert("❌ Ти нічого не ввів! Вірна відповідь: "+wordObj.en); }
+  userAnswers.push({question:wordObj.ua, correct:wordObj.en, user:val, status:status});
+  save(); renderWords(); nextWord();
 }
 
 function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
-function exportData(){
-  let blob = new Blob([JSON.stringify(words)], {type:"application/json"});
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "backup.json";
-  a.click();
-}
-
-function importData(e){
-  let reader = new FileReader();
-  reader.onload = function(){
-    words = JSON.parse(reader.result);
-    save();
-    renderWords();
-    alert("Імпортовано");
-  };
-  reader.readAsText(e.target.files[0]);
-}
-
-function autoBackup(){
-  let today = new Date().toISOString().slice(0,10);
-  let last = localStorage.getItem("lastBackup");
-  if(last===today) return;
-  if(confirm("Зробити backup?")){
-    exportData();
-    localStorage.setItem("lastBackup", today);
-  }
-}
-
-function getColor(w){
-  let score = (w.correct || 0) - (w.wrong || 0);
-  if(score >= 5) return "#c8f7c5";
-  if(score >= 0) return "#fff3b0";
-  return "#f7c5c5";
-}
-
-function renderWords(){
-  let list = document.getElementById("wordList");
-  list.innerHTML = "";
-
-const statsDiv = document.createElement("div");
-  statsDiv.style.marginBottom = "10px";
-  statsDiv.style.fontWeight = "bold";
-  statsDiv.innerText = renderStats();
-  list.appendChild(statsDiv);
-
-  words.forEach((w, i) => {
-    list.innerHTML += `
-      <div style="margin-bottom:10px; padding:10px; border-radius:8px; background:${getColor(w)};">
-        <b>${w.ua}</b> — ${w.en}
-        <br>
-        <button onclick="editWord(${i})">✏️</button>
-        <button onclick="deleteWord(${i})">🗑</button>
-      </div>
-    `;
-  });
-}
-
-function renderStats() {
-    const total = words.length;
-    let good = 0, medium = 0, bad = 0;
-
-    words.forEach(w => {
-        const score = (w.correct || 0) - (w.wrong || 0);
-        if(score >= 5) good++;
-        else if(score >= 0) medium++;
-        else bad++;
-    });
-
-    return `Всього слів: ${total} | Добрі: ${good} 🟢 | Середні: ${medium} 🟡 | Погані: ${bad} 🔴`;
-}
-
-
-
-function deleteWord(index){
-  if(confirm("Видалити слово?")){
-    words.splice(index,1);
-    save();
-    renderWords();
-  }
-}
-
-function editWord(index){
-  let newUa = prompt("Українське:", words[index].ua);
-  let newEn = prompt("Англійське:", words[index].en);
-
-  if(newUa && newEn){
-    words[index].ua = newUa;
-    words[index].en = newEn;
-    save();
-    renderWords();
-  }
-}
-
-function toggleWordBase(){
-  let el = document.getElementById("wordBase");
-  el.style.display = el.style.display === "none" ? "block" : "none";
-}
-
-function toggleAdd(){
-  let el = document.getElementById("addBlock");
-  el.style.display = el.style.display === "none" ? "block" : "none";
-}
-
-function toggleExport(){
-  let el = document.getElementById("Export");
-  el.style.display = el.style.display === "none" ? "block" : "none";
-}
-
-function toggleTest(){
-  let el = document.getElementById("testBlock");
-  el.style.display = el.style.display === "none" ? "block" : "none";
-}
-
-function reloadApp() {
-    if ('caches' in window) {
-        caches.keys().then(names => {
-            names.forEach(name => caches.delete(name));
-        }).then(() => {
-            location.reload();
-        });
-    } else {
-        location.reload();
-    }
-}
-
-function showResults() {
-  const box = document.getElementById("resultsBox");
-  const list = document.getElementById("resultsList");
-
-  list.innerHTML = "";
-
-  userAnswers.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "result-item " + item.status;
-
-    div.innerHTML = `
-      <b>${item.question}</b><br>
-      Ти: ${item.user || "—"}<br>
-      Правильно: ${item.correct}
-    `;
-
+// --- Результати ---
+function showResults(){
+  const box=document.getElementById("resultsBox");
+  const list=document.getElementById("resultsList");
+  list.innerHTML="";
+  userAnswers.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="result-item "+item.status;
+    div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`;
     list.appendChild(div);
   });
-
-  box.style.display = "block";
+  box.style.display="block";
 }
-
-function closeResults() {
-  document.getElementById("resultsBox").style.display = "none";
-}
-
-function filterResults(type) {
-  const list = document.getElementById("resultsList");
-  list.innerHTML = "";
-
-  let filtered = userAnswers;
-
-  if (type !== "all") {
-    filtered = userAnswers.filter(item => item.status === type);
-  }
-
-  filtered.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "result-item " + (item.status || "");
-
-    div.innerHTML = `
-      <b>${item.question}</b><br>
-      Ти: ${item.user || "—"}<br>
-      Правильно: ${item.correct}
-    `;
-
+function closeResults(){ document.getElementById("resultsBox").style.display="none"; }
+function filterResults(type){
+  const list=document.getElementById("resultsList");
+  list.innerHTML="";
+  let filtered=userAnswers;
+  if(type!=="all") filtered=userAnswers.filter(item=>item.status===type);
+  filtered.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="result-item "+item.status;
+    div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`;
     list.appendChild(div);
   });
 }
 
-
-
-
-
-function retryBad() {
-  // беремо тільки bad + medium
-  const retryList = userAnswers.filter(item => 
-    item.status === "bad" || item.status === "medium"
-  );
-
-  if (retryList.length === 0) {
-    alert("Немає слабких слів 👍");
-    return;
-  }
-
-  // 🔥 формуємо новий тест
-  testWords = retryList.map(item => {
-    return {
-      ua: item.question,
-      en: item.correct
-    };
-  });
-
-  currentIndex = 0;
-  userAnswers = [];
-
-  document.getElementById("resultsBox").style.display = "none";
-  document.getElementById("testArea").style.display = "block";
-
+function retryBad(){
+  const retryList=userAnswers.filter(item=>item.status==="bad"||item.status==="medium").map(item=>words.find(w=>w.ua===item.question)).filter(Boolean);
+  if(retryList.length===0){ alert("Немає слабких слів 👍"); return; }
+  current=retryList; userAnswers=[];
+  document.getElementById("resultsBox").style.display="none";
+  document.getElementById("testArea").style.display="block";
   nextWord();
 }
 
-function setTestCount(n){
-  const input = document.getElementById("testCount");
-  if(n === '') input.value = ''; // довільна кількість → користувач сам вводить
-  else input.value = n;
+// --- Рендер і слова ---
+function renderWords(){
+  const search=document.getElementById("searchWord")?.value.trim().toLowerCase();
+  const list=document.getElementById("wordList");
+  if(!list) return;
+  list.innerHTML="";
+  const statsDiv=document.getElementById("wordStats");
+  statsDiv.innerText=renderStats();
+  words.forEach((w,i)=>{
+    if(search && !w.ua.toLowerCase().includes(search) && !w.en.toLowerCase().includes(search)) return;
+    list.innerHTML+=`<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:${getColor(w)};">
+      <b>${w.ua}</b> — ${w.en}<br>
+      <button onclick="editWord(${i})">✏️</button>
+      <button onclick="deleteWord(${i})">🗑</button>
+    </div>`;
+  });
+}
+function renderStats(){
+  let good=0,medium=0,bad=0;
+  words.forEach(w=>{const s=(w.correct||0)-(w.wrong||0); if(s>=5) good++; else if(s>=0) medium++; else bad++;});
+  return `Всього слів: ${words.length} | Добрі: ${good} 🟢 | Середні: ${medium} 🟡 | Погані: ${bad} 🔴`;
+}
+function getColor(w){const s=(w.correct||0)-(w.wrong||0); if(s>=5) return "#c8f7c5"; if(s>=0) return "#fff3b0"; return "#f7c5c5";}
+
+function deleteWord(i){ if(confirm("Видалити слово?")){ words.splice(i,1); save(); renderWords(); } }
+function editWord(i){ 
+  let newUa=prompt("Українське:",words[i].ua); 
+  let newEn=prompt("Англійське:",words[i].en); 
+  if(newUa&&newEn){ words[i].ua=newUa; words[i].en=newEn; save(); renderWords(); }
 }
 
+// --- Експорт/Імпорт ---
+function exportData(){ let blob=new Blob([JSON.stringify(words)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
+function importData(e){ let reader=new FileReader(); reader.onload=function(){ words=JSON.parse(reader.result); save(); renderWords(); alert("Імпортовано"); }; reader.readAsText(e.target.files[0]); }
 
+// --- Пошук ---
+function clearSearch(){ if(document.getElementById("searchWord")){ document.getElementById("searchWord").value=""; renderWords(); } }
 
 renderWords();
-autoBackup();
 </script>
-
 </body>
 </html>
