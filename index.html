@@ -36,9 +36,9 @@ button { background:#007AFF; color:white; border:none; }
   </div>
 </div>
 
-<div class="card">
+<div  class="card">
   <h3 onclick="toggleTest()" style="cursor:pointer;">🧠 Тести</h3>
-  <div id="testBlock" style="display:none;">
+  <div style="display:none;">
 
     <!-- Вибір кількості слів -->
     <div style="margin-bottom:10px;">
@@ -149,7 +149,14 @@ function startTest(){
     });
   }
 
-  // Випадковий порядок та обмеження кількості
+filtered = shuffle(filtered);
+
+  // обмеження кількості слів
+  if(count < filtered.length) filtered = filtered.slice(0,count);
+
+  runTest(filtered);
+
+  
  
 }
 
