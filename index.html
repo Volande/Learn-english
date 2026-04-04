@@ -46,13 +46,21 @@ button { background:#007AFF; color:white; border:none; }
 </div>
 
 <div id="testArea" class="card" style="display:none;">
-
-<div id="resultsBox" style="display:none;">
-    <h3>Результати</h3>
-    <div id="resultsList"></div>
-    <button onclick="closeResults()">Закрити</button>
+    <!-- тут сам тест -->
 </div>
 
+<div id="resultsBox" class="card" style="display:none;">
+    <h3>Результати</h3>
+
+    <button onclick="retryBad()">🔁 Повторити слабкі</button>
+    <button onclick="filterResults('all')">Всі</button>
+    <button onclick="filterResults('bad')">🔴 Погані</button>
+    <button onclick="filterResults('medium')">🟡 Середні</button>
+    <button onclick="filterResults('good')">🟢 Добрі</button>
+
+    <div id="resultsList"></div>
+
+    <button onclick="closeResults()">Закрити</button>
 </div>
 
 <div class="card">
@@ -262,6 +270,8 @@ function reloadApp() {
 }
 
 function showResults() {
+  document.getElementById("testArea").style.display = "none"; // 🔥 сховали тест
+
   const box = document.getElementById("resultsBox");
   const list = document.getElementById("resultsList");
 
@@ -282,6 +292,93 @@ function showResults() {
 
   box.style.display = "block";
 }
+
+function closeResults() {
+  document.getElementById("resultsBox").style.display = "none";
+}
+
+function filterResults(type) {
+  const list = document.getElementById("resultsList");
+  list.innerHTML = "";
+
+  let filtered = userAnswers;
+
+  // Якщо є статуси (correct, wrong) в об'єктах, можна залишити фільтр
+  if (type !== "all") {
+    filtered = userAnswers.filter(item => item.status === type);
+  }
+
+  filtered.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "result-item " + (item.status || "");
+
+    div.innerHTML = `
+      <b>${item.ua}</b> — ${item.eu}<br>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+
+
+function retryBad() {
+  // беремо тільки bad + medium
+  const retryList = userAnswers.filter(item => 
+    item.status === "bad" || item.status === "medium"
+  );
+
+  if (retryList.length === 0) {
+    alert("Немає слабких слів 👍");
+    return;
+  }
+
+  // 🔥 формуємо новий тест
+  testWords = retryList.map(item => {
+    return {
+      ua: item.question,
+      en: item.correct
+    };
+  });
+
+  currentIndex = 0;
+  userAnswers = [];
+
+  document.getElementById("resultsBox").style.display = "none";
+  document.getElementById("testArea").style.display = "block";
+
+  nextWord();
+}
+
+function retryBad() {
+  // беремо тільки bad + medium
+  const retryList = userAnswers.filter(item => 
+    item.status === "bad" || item.status === "medium"
+  );
+
+  if (retryList.length === 0) {
+    alert("Немає слабких слів 👍");
+    return;
+  }
+
+  // 🔥 формуємо новий тест
+  testWords = retryList.map(item => {
+    return {
+      ua: item.question,
+      en: item.correct
+    };
+  });
+
+  currentIndex = 0;
+  userAnswers = [];
+
+  document.getElementById("resultsBox").style.display = "none";
+  document.getElementById("testArea").style.display = "block";
+
+  nextWord();
+}
+
+
 
 renderWords();
 autoBackup();
