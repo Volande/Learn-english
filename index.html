@@ -23,7 +23,7 @@ button { background:#007AFF; color:white; border:none; }
 <body>
 
 <h2>📚 Vocabulary Trainer
-Проверка изменений</h2>
+Еще раз проверка</h2>
 
 <button onclick="reloadApp()">🔄 Перезавантажити</button>
 
@@ -128,48 +128,67 @@ function runTest(list){
 }
 
 function nextWord(){
-  if(current.length===0){ alert("Тест завершено"); return; }
+  if(current.length === 0){
+    showResults();
+    document.getElementById("testArea").style.display = "none";
+    return;
+  }
+
   let w = current.pop();
   let area = document.getElementById("testArea");
   area.style.display="block";
   area.innerHTML = `
     <h3>${w.ua}</h3>
     <input id="answer" placeholder="Введи переклад">
-    <button onclick="check('${w.en}', ${words.indexOf(w)})">OK</button>
+    <button onclick="checkWord('${w.en}', '${w.ua}')">OK</button>
   `;
-
 }
 
-function check(correctAnswer, index){
-  let val = document.getElementById("answer").value.trim().toLowerCase();
 
+function checkWord(correctAnswer, ua){
+  let val = document.getElementById("answer").value.trim();
   let status;
 
-  if(val === correctAnswer.toLowerCase()){
-    words[index].correct++;
+  if(val.toLowerCase() === correctAnswer.toLowerCase()){
     status = "good";
-    alert("✅");
-  } else if (val !== "") {
-    words[index].wrong++;
+    alert("✅ Правильно!");
+  } else if(val !== ""){
     status = "medium";
-    alert("❌ " + correctAnswer);
+    alert("❌ Неправильно! Правильна відповідь: " + correctAnswer);
   } else {
-    words[index].wrong++;
     status = "bad";
-    alert("❌ " + correctAnswer);
+    alert("❌ Пропущено! Правильна відповідь: " + correctAnswer);
   }
 
-  // 🔥 ЗБЕРІГАЄМО РЕЗУЛЬТАТ
   userAnswers.push({
-    question: words[index].ua,     // або як у тебе називається українське слово
+    question: ua,
     correct: correctAnswer,
     user: val,
     status: status
   });
 
-  save();
-  renderWords();
+  showResults(); // можна викликати тільки в кінці тесту
   nextWord();
+}
+
+function showResults(){
+  const box = document.getElementById("resultsBox");
+  const list = document.getElementById("resultsList");
+  list.innerHTML = "";
+
+  userAnswers.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "result-item " + (item.status || "");
+
+    div.innerHTML = `
+      <b>${item.question}</b><br>
+      Ти: ${item.user || "—"}<br>
+      Правильно: ${item.correct}
+    `;
+    list.appendChild(div);
+  });
+
+  box.style.display = "block";
 }
 
 function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
@@ -276,28 +295,6 @@ function reloadApp() {
     } else {
         location.reload();
     }
-}
-
-function showResults() {
-  const box = document.getElementById("resultsBox");
-  const list = document.getElementById("resultsList");
-
-  list.innerHTML = "";
-
-  userAnswers.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "result-item " + item.status;
-
-    div.innerHTML = `
-      <b>${item.question}</b><br>
-      Ти: ${item.user || "—"}<br>
-      Правильно: ${item.correct}
-    `;
-
-    list.appendChild(div);
-  });
-
-  box.style.display = "block";
 }
 
 function closeResults() {
