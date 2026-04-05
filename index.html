@@ -5,16 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vocabulary Trainer</title>
 <style>
-body { font-family:-apple-system,sans-serif; margin:0; padding:0; background:#f5f5f5; }
+body { font-family:-apple-system, sans-serif; margin:0; padding:0; background:#f5f5f5; }
+/* Header */
 header { background:#007AFF; color:white; padding:20px; text-align:center; font-size:24px; font-weight:bold; position:relative; }
-#menuBtn { position:absolute; top:20px; left:5px; background:#005BBB; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+/* Container */
 .container { display:flex; height:calc(100vh - 70px); }
-.sidebar { width:0; overflow-x:hidden; transition:0.3s; background:#ffffff; border-right:1px solid #ccc; padding:20px 0; box-shadow:2px 0 5px rgba(0,0,0,0.1); }
+/* Sidebar */
+.sidebar { width:0; overflow-x:hidden; transition:0.3s; background:#fff; border-right:1px solid #ccc; padding:20px 0; box-shadow:2px 0 5px rgba(0,0,0,0.1); }
 .sidebar.open { width:300px; }
 .sidebar h3 { padding:10px 20px; margin:0; cursor:pointer; background:#f0f0f0; }
 .sidebar .card { padding:10px 20px; display:none; }
 .sidebar input, .sidebar select, .sidebar button { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
 .sidebar button { background:#007AFF; color:white; border:none; }
+/* Main */
 .main { flex:1; padding:20px; overflow-y:auto; }
 .main button { background:#007AFF; color:white; border:none; padding:10px; margin:5px 0; width:200px; border-radius:8px; cursor:pointer; }
 .card { background:white; padding:15px; border-radius:12px; margin-bottom:15px; }
@@ -29,11 +32,12 @@ header { background:#007AFF; color:white; padding:20px; text-align:center; font-
 <body>
 
 <header>
-  <button id="menuBtn">☰ Меню</button>
+  <button style="position:absolute; top:20px; left:5px;" onclick="toggleSidebar()">☰ Меню</button>
   📚 Vocabulary Trainer
 </header>
 
 <div class="container">
+
   <div class="sidebar" id="sidebar">
     <h3 onclick="toggleCard('addCard')">➕ Додавання слова</h3>
     <div class="card" id="addCard">
@@ -44,7 +48,7 @@ header { background:#007AFF; color:white; padding:20px; text-align:center; font-
 
     <h3 onclick="toggleCard('wordBaseCard')">📖 База слів</h3>
     <div class="card" id="wordBaseCard">
-      <input id="searchWord" placeholder="Пошук слова" oninput="searchWord()">
+      <input id="searchWord" placeholder="Пошук слова" oninput="renderWords()">
       <button onclick="clearSearch()">Очистити пошук</button>
       <div id="wordStats" style="font-weight:bold;margin-bottom:10px;"></div>
       <div id="wordList"></div>
@@ -54,14 +58,13 @@ header { background:#007AFF; color:white; padding:20px; text-align:center; font-
     <div class="card" id="exportCard">
       <button onclick="exportData()">📥 Експорт</button>
       <input type="file" onchange="importData(event)">
-      <input type="file" id="jsonFile" onchange="importJSONtoFirebase(event)">
-      <button onclick="importJSONtoFirebase()">Імпортувати JSON у Firebase</button>
     </div>
+    <button onclick="hardReload()">🔄 Перезавантажити PWA</button>
   </div>
 
   <div class="main">
-    <div class="card">
-      <h3>🧠 Тести</h3>
+    <button onclick="toggleTestCard()">🧠 Вибір тестів</button>
+    <div class="card" id="testCard" style="display:none;">
       <div>
         <button onclick="setTestCount(20)">20 слів</button>
         <button onclick="setTestCount(50)">50 слів</button>
@@ -96,170 +99,224 @@ header { background:#007AFF; color:white; padding:20px; text-align:center; font-
   </div>
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDJ62MDMp9T82_G20NHs6n_XfGILiEsLlU",
-  authDomain: "learn-english-48994.firebaseapp.com",
-  databaseURL: "https://learn-english-48994-default-rtdb.firebaseio.com",
-  projectId: "learn-english-48994",
-  storageBucket: "learn-english-48994.appspot.com",
-  messagingSenderId: "395379379531",
-  appId: "1:395379379531:web:7b2deb76d426d986d82cce"
-};
-// Ініціалізація
-firebase.initializeApp(firebaseConfig);
+// Sidebar
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function toggleCard(id){ const c=document.getElementById(id); c.style.display=c.style.display==='block'?'none':'block'; }
+function toggleTestCard(){ const c=document.getElementById('testCard'); c.style.display=c.style.display==='block'?'none':'block'; }
 
-// --- Sidebar ---
-const sidebar = document.getElementById("sidebar");
-document.getElementById("menuBtn").onclick = ()=>{ sidebar.classList.toggle("open"); }
-function openSidebar(){ sidebar.classList.add("open"); }
-function closeSidebar(){ sidebar.classList.remove("open"); }
-function toggleCard(id){ const card=document.getElementById(id); card.style.display = card.style.display==='block'?'none':'block'; }
+// --- Слова ---
+let userAnswers=[];
+let words=JSON.parse(localStorage.getItem("words")||"[]");
+let current=null;
 
-// --- Логіка ---
-let words=[], userAnswers=[], current=null;
+function save(){ localStorage.setItem("words", JSON.stringify(words)); }
 
-// Завантаження з Firebase
-firebase.database().ref('words').on('value', snapshot=>{
-  words = snapshot.val() || [];
-  renderWords();
-});
-
-// Збереження
-function save(){ firebase.database().ref('words').set(words); }
-
-// Додавання слова
 function addWord(){
-  let ua=document.getElementById("ua").value.trim();
-  let en=document.getElementById("en").value.trim();
+  let ua=document.getElementById("ua").value;
+  let en=document.getElementById("en").value;
   if(!ua||!en) return;
   words.push({ua,en,correct:0,wrong:0});
+  save(); renderWords();
+  document.getElementById("ua").value=""; document.getElementById("en").value="";
+}
+
+// --- Тести ---
+function startTest(){
+  userAnswers=[];
+  let count=+document.getElementById("testCount").value || words.length;
+  const type=document.getElementById("testType").value;
+  let filtered=[...words];
+  if(type!=="all"){
+    filtered=filtered.filter(w=>{
+      const score=(w.correct||0)-(w.wrong||0);
+      if(type==="good") return score>=5;
+      if(type==="medium") return score>=0 && score<5;
+      if(type==="bad") return score<0;
+    });
+  }
+  filtered=shuffle(filtered);
+  if(count<filtered.length) filtered=filtered.slice(0,count);
+  document.getElementById("testCard").style.display="none"; // закриваємо вибір тесту
+  runTest(filtered);
+}
+
+function startWeakTest(){
+  let weak=[...words].sort((a,b)=> (b.wrong-b.correct)-(a.wrong-a.correct));
+  document.getElementById("testCard").style.display="none";
+  runTest(weak.slice(0,10));
+}
+
+function runTest(list){
+  if(list.length===0){ alert("Немає слів для тесту!"); return; }
+  current=list;
+  nextWord();
+}
+
+function nextWord(){
+  if(!current || current.length===0){ document.getElementById("testArea").style.display="none"; showResults(); return; }
+  let w=current.pop();
+  const area=document.getElementById("testArea");
+  area.style.display="block";
+  area.innerHTML=`<h3>${w.ua}</h3>`;
+  const input=document.createElement("input");
+  input.id="answer"; input.placeholder="Введи переклад";
+  area.appendChild(input);
+  const btn=document.createElement("button");
+  btn.textContent="OK"; btn.style.marginTop="5px";
+  area.appendChild(btn);
+  btn.addEventListener("click",()=>check(w));
+}
+
+function check(wordObj){
+  const val = document.getElementById("answer").value.trim().toLowerCase();
+  let status, message;
+
+  if(val === wordObj.en.toLowerCase()){
+    wordObj.correct++;
+    status = "good";
+    message = "✅ Правильно!";
+  } else if(val !== ""){
+    wordObj.wrong++;
+    status = "medium";
+    message = "❌ Неправильно! Правильно: " + wordObj.en;
+  } else {
+    wordObj.wrong++;
+    status = "bad";
+    message = "❌ Пусто! Правильно: " + wordObj.en;
+  }
+
+  userAnswers.push({
+    question: wordObj.ua,
+    correct: wordObj.en,
+    user: val,
+    status: status
+  });
+
   save();
   renderWords();
-  document.getElementById("ua").value="";
-  document.getElementById("en").value="";
+
+  showFeedback(message);
+
 }
 
-// Пошук
-function searchWord(){
-  const val=document.getElementById("searchWord").value.toLowerCase();
-  renderWords(words.filter(w=>w.ua.toLowerCase().includes(val)||w.en.toLowerCase().includes(val)));
-}
-function clearSearch(){ document.getElementById("searchWord").value=""; renderWords(); }
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
-// Рендер
-function renderWords(list=words){
-  const listDiv=document.getElementById("wordList");
-  if(!listDiv) return;
-  listDiv.innerHTML="";
-  document.getElementById("wordStats").innerText = renderStats(list);
-  list.forEach((w,i)=>{
-    listDiv.innerHTML+=`<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:${getColor(w)};">
+// --- Результати ---
+function showResults(){
+  const box=document.getElementById("resultsBox");
+  const list=document.getElementById("resultsList");
+  list.innerHTML="";
+  userAnswers.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="result-item "+item.status;
+    div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`;
+    list.appendChild(div);
+  });
+  box.style.display="block";
+}
+function closeResults(){ document.getElementById("resultsBox").style.display="none"; }
+function filterResults(type){
+  const list=document.getElementById("resultsList");
+  list.innerHTML="";
+  let filtered=userAnswers;
+  if(type!=="all") filtered=userAnswers.filter(item=>item.status===type);
+  filtered.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="result-item "+item.status;
+    div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`;
+    list.appendChild(div);
+  });
+}
+
+function retryBad(){
+  const retryList=userAnswers.filter(item=>item.status==="bad"||item.status==="medium").map(item=>words.find(w=>w.ua===item.question)).filter(Boolean);
+  if(retryList.length===0){ alert("Немає слабких слів 👍"); return; }
+  current=retryList; userAnswers=[];
+  document.getElementById("resultsBox").style.display="none";
+  document.getElementById("testArea").style.display="block";
+  nextWord();
+}
+
+// --- Рендер і слова ---
+function renderWords(){
+  const search=document.getElementById("searchWord")?.value.trim().toLowerCase();
+  const list=document.getElementById("wordList");
+  if(!list) return;
+  list.innerHTML="";
+  const statsDiv=document.getElementById("wordStats");
+  statsDiv.innerText=renderStats();
+  words.forEach((w,i)=>{
+    if(search && !w.ua.toLowerCase().includes(search) && !w.en.toLowerCase().includes(search)) return;
+    list.innerHTML+=`<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:${getColor(w)};">
       <b>${w.ua}</b> — ${w.en}<br>
       <button onclick="editWord(${i})">✏️</button>
       <button onclick="deleteWord(${i})">🗑</button>
     </div>`;
   });
 }
-function renderStats(list=words){
-  let good=0, medium=0, bad=0;
-  list.forEach(w=>{ const score=(w.correct||0)-(w.wrong||0); if(score>=5) good++; else if(score>=0) medium++; else bad++; });
-  return `Всього слів: ${list.length} | Добрі: ${good} 🟢 | Середні: ${medium} 🟡 | Погані: ${bad} 🔴`;
+function renderStats(){
+  let good=0,medium=0,bad=0;
+  words.forEach(w=>{const s=(w.correct||0)-(w.wrong||0); if(s>=5) good++; else if(s>=0) medium++; else bad++;});
+  return `Всього слів: ${words.length} | Добрі: ${good} 🟢 | Середні: ${medium} 🟡 | Погані: ${bad} 🔴`;
 }
-function getColor(w){ const score=(w.correct||0)-(w.wrong||0); return score>=5?"#c8f7c5":score>=0?"#fff3b0":"#f7c5c5"; }
+function getColor(w){const s=(w.correct||0)-(w.wrong||0); if(s>=5) return "#c8f7c5"; if(s>=0) return "#fff3b0"; return "#f7c5c5";}
 
 function deleteWord(i){ if(confirm("Видалити слово?")){ words.splice(i,1); save(); renderWords(); } }
-function editWord(i){ let newUa=prompt("Українське:",words[i].ua); let newEn=prompt("Англійське:",words[i].en); if(newUa&&newEn){ words[i].ua=newUa; words[i].en=newEn; save(); renderWords(); } }
-
-// --- Тести ---
-function startTest(){
-  closeSidebar(); // закриваємо меню
-  userAnswers=[];
-  let count=+document.getElementById("testCount").value||words.length;
-  const type=document.getElementById("testType").value; 
-  let filtered=[...words];
-  if(type!=='all'){ filtered=filtered.filter(w=>{
-    const score=(w.correct||0)-(w.wrong||0);
-    if(type==="good") return score>=5;
-    if(type==="medium") return score>=0 && score<5;
-    if(type==="bad") return score<0;
-  }); }
-  filtered=shuffle(filtered);
-  if(count<filtered.length) filtered=filtered.slice(0,count);
-  runTest(filtered);
+function editWord(i){ 
+  let newUa=prompt("Українське:",words[i].ua); 
+  let newEn=prompt("Англійське:",words[i].en); 
+  if(newUa&&newEn){ words[i].ua=newUa; words[i].en=newEn; save(); renderWords(); }
 }
 
-function startWeakTest(){
-  closeSidebar(); // закриваємо меню
-  let weak=[...words].sort((a,b)=>(b.wrong-b.correct)-(a.wrong-a.correct));
-  runTest(weak.slice(0,10));
+async function hardReload(){
+  if(!confirm("Повністю перезавантажити додаток? Кеш буде очищено.")) return;
+
+  // 1. Видаляємо всі кеші
+  if ('caches' in window) {
+    const names = await caches.keys();
+    for (let name of names) {
+      await caches.delete(name);
+    }
+  }
+
+  // 2. Видаляємо service workers
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (let reg of regs) {
+      await reg.unregister();
+    }
+  }
+
+  // 3. Перезавантаження
+  location.reload(true);
 }
 
-function runTest(list){ if(list.length===0) return; current=list; nextWord(); }
-function nextWord(){
-  if(!current||current.length===0){ document.getElementById("testArea").style.display="none"; showResults(); return; }
-  let w=current.pop();
-  const area=document.getElementById("testArea");
-  area.style.display="block";
-  area.innerHTML=`<h3>${w.ua}</h3>
-    <input id="answer" placeholder="Введи переклад">
-    <button id="checkBtn">OK</button>`;
-  document.getElementById("checkBtn").onclick=()=>check(w);
+
+
+function showFeedback(text){
+  const area = document.getElementById("testArea");
+
+  let msg = document.createElement("div");
+  msg.style.marginTop = "10px";
+  msg.innerText = text;
+
+  let btn = document.createElement("button");
+  btn.textContent = "Далі";
+  btn.onclick = nextWord;
+
+  area.appendChild(msg);
+  area.appendChild(btn);
 }
 
-function check(w){
-  const val=document.getElementById("answer").value.trim().toLowerCase();
-  let status;
-  if(val===w.en.toLowerCase()){ w.correct++; status="good"; alert("✅"); }
-  else { w.wrong++; status=(val===''?'bad':'medium'); alert("❌ Вірна відповідь: "+w.en); }
-  userAnswers.push({question:w.ua, correct:w.en, user:val, status:status});
-  save();
-  renderWords();
-  nextWord();
-}
 
-// --- Результати ---
-function showResults(){ 
-  const box=document.getElementById("resultsBox"); 
-  const list=document.getElementById("resultsList"); 
-  list.innerHTML=""; 
-  userAnswers.forEach(item=>{
-    const div=document.createElement("div"); 
-    div.className="result-item "+item.status; 
-    div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`; 
-    list.appendChild(div); 
-  }); 
-  box.style.display="block"; 
-}
 
-function closeResults(){ document.getElementById("resultsBox").style.display="none"; }
-function filterResults(type){ const list=document.getElementById("resultsList"); list.innerHTML=""; let filtered=userAnswers; if(type!=="all") filtered=userAnswers.filter(item=>item.status===type); filtered.forEach(item=>{ const div=document.createElement("div"); div.className="result-item "+item.status; div.innerHTML=`<b>${item.question}</b><br>Ти: ${item.user||"—"}<br>Правильно: ${item.correct}`; list.appendChild(div); }); }
-function retryBad(){ const retryList=userAnswers.filter(item=>item.status==="bad"||item.status==="medium"); if(retryList.length===0){ alert("Немає слабких слів 👍"); return; } current=retryList.map(item=>({ua:item.question,en:item.correct})); userAnswers=[]; document.getElementById("resultsBox").style.display="none"; document.getElementById("testArea").style.display="block"; nextWord(); }
+// --- Експорт/Імпорт ---
+function exportData(){ let blob=new Blob([JSON.stringify(words)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
+function importData(e){ let reader=new FileReader(); reader.onload=function(){ words=JSON.parse(reader.result); save(); renderWords(); alert("Імпортовано"); }; reader.readAsText(e.target.files[0]); }
 
-function setTestCount(n){ const input=document.getElementById("testCount"); if(n==='') input.value=''; else input.value=n; }
-
-// --- JSON -> Firebase ---
-function importJSONtoFirebase(event){
-  const file = event.target.files ? event.target.files[0] : null;
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=function(){
-    try{
-      const data=JSON.parse(reader.result);
-      firebase.database().ref('words').set(data)
-        .then(()=>alert("Дані успішно перенесено у Firebase!"))
-        .catch(err=>alert("Помилка: "+err));
-    } catch(e){ alert("Невірний формат JSON!"); }
-  };
-  reader.readAsText(file);
-}
-
-// --- Допоміжні ---
-function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+// --- Пошук ---
+function clearSearch(){ if(document.getElementById("searchWord")){ document.getElementById("searchWord").value=""; renderWords(); } }
 
 renderWords();
 </script>
