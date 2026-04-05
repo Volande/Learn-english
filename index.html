@@ -2,6 +2,10 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vocabulary Trainer</title>
 <style>
@@ -25,8 +29,15 @@ header { background:#007AFF; color:white; padding:20px; text-align:center; font-
 .result-item.good { background:#c8f7c5; }
 .result-item.medium { background:#fff3b0; }
 .result-item.bad { background:#f7c5c5; }
-#testArea input { width:calc(100% - 20px); padding:10px; margin:5px 0; }
+#testArea input { width:calc(100% - 20px); padding:10px; margin:5px 0; font-size: 16px;}
+
+input, select, textarea {
+  font-size: 16px;
+}
+
 #testArea button { margin-top:5px; }
+
+
 </style>
 </head>
 <body>
@@ -124,7 +135,11 @@ function addWord(){
 // --- Тести ---
 function startTest(){
   userAnswers=[];
-  let count=+document.getElementById("testCount").value || words.length;
+  let count = parseInt(document.getElementById("testCount").value);
+
+if(!count || count <= 0){
+  count = words.length;
+}
   const type=document.getElementById("testType").value;
   let filtered=[...words];
   if(type!=="all"){
@@ -311,6 +326,19 @@ function showFeedback(text){
 
 
 
+function setTestCount(value){
+  const input = document.getElementById("testCount");
+
+  if(value === ''){
+    input.value = '';
+    input.placeholder = "Введи кількість";
+  } else {
+    input.value = value;
+  }
+}
+
+
+
 // --- Експорт/Імпорт ---
 function exportData(){ let blob=new Blob([JSON.stringify(words)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
 function importData(e){ let reader=new FileReader(); reader.onload=function(){ words=JSON.parse(reader.result); save(); renderWords(); alert("Імпортовано"); }; reader.readAsText(e.target.files[0]); }
@@ -322,3 +350,5 @@ renderWords();
 </script>
 </body>
 </html>
+
+
